@@ -1,0 +1,101 @@
+#include <ESP8266WiFi.h>
+#include <Servo.h>
+const char* ssid = "jacob";
+const char* password = "abcdefgh";
+ Servo myservo ;
+WiFiServer server(80);
+ 
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+ myservo.attach(2);
+ 
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+ 
+  WiFi.begin(ssid, password);
+ 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+ 
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL to connect: ");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
+ 
+}
+ 
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+ 
+  // Wait until the client sends some data
+  Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+ 
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+ 
+  // Match the request
+ 
+  int value = LOW;
+  if (request.indexOf("/LOCK=ON") != -1)  {
+    myservo.write(180);
+    delay(10);
+    value = HIGH;
+  }
+  if (request.indexOf("/LOCK=OFF") != -1)  {
+    myservo.write(0);
+    value = LOW;
+  }
+ 
+// Set ledPin according to the request
+//digitalWrite(ledPin, value);
+ 
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+ client.println("<head>");
+client.println("<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css\" integrity=\"sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ\" crossorigin=\"anonymous\">");
+client.println("<script src=\"https://code.jquery.com/jquery-3.1.1.slim.min.js\" integrity=\"sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n\" crossorigin=\"anonymous\"></script>");
+client.println("<script src=\"https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js\" integrity=\"sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb\" crossorigin=\"anonymous\"></script>\");");
+client.println("</head>");
+ 
+  if(value == HIGH) {
+    client.print("On");
+  } else {
+    client.print("Off");
+  }
+  client.println("<br><br>");
+  client.println("<a href=\"/LOCK=ON\"><button>LOCK</button></a>");
+  client.println("<a href=\"/LOCK=OFF\"><button>UNLOCK </button></a><br />");  
+  client.println("</html>");
+ 
+  delay(1);
+  Serial.println("Client disonnected");
+  Serial.println("");
+ 
+}
+ 
